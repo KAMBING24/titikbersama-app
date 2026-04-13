@@ -1,0 +1,34 @@
+{
+  "app": "titikbersama",
+  "version": 1,
+  "exportedAt": "2026-04-13T15:02:25.828Z",
+  "data": {
+    "products": [],
+    "purchases": [],
+    "sales": [],
+    "debts": [
+      {
+        "id": 1,
+        "investor": "Pak Budi",
+        "amount": 5000000,
+        "paid": 0,
+        "date": "2024-01-15",
+        "interest": 0,
+        "notes": "Modal awal",
+        "refKind": "",
+        "refId": null
+      }
+    ],
+    "payments": [],
+    "finance": {
+      "openingBalance": 0,
+      "openingDate": "",
+      "openingNote": "",
+      "transactions": []
+    },
+    "settings": {
+      "invoicePrefix": "INV-",
+      "nextInvoiceNumber": 1
+    }
+  }
+}
