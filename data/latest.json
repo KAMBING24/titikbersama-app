@@ -1,7 +1,7 @@
 {
   "app": "titikbersama",
   "version": 1,
-  "exportedAt": "2026-04-13T15:29:17.913Z",
+  "exportedAt": "2026-04-13T15:30:21.955Z",
   "data": {
     "products": [
       {
@@ -300,7 +300,7 @@
         "total": 210000,
         "profit": 91666.66666666667,
         "avgBuyPrice": 118333.33333333333,
-        "status": "success",
+        "status": "pending",
         "channel": "Shopee",
         "note": "",
         "costs": {
