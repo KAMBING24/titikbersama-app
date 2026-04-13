@@ -1,7 +1,7 @@
 {
   "app": "titikbersama",
   "version": 1,
-  "exportedAt": "2026-04-13T15:31:35.420Z",
+  "exportedAt": "2026-04-13T15:32:47.906Z",
   "data": {
     "products": [
       {
@@ -9,7 +9,7 @@
         "name": "Hard Disk 1TB",
         "sku": "HDD-1TB",
         "category": "harddisk",
-        "stock": 2,
+        "stock": 1,
         "price": 399000,
         "avgBuyPrice": 100000,
         "notes": "Import CSV"
@@ -29,7 +29,7 @@
         "name": "Busi Drat Panjang Vespa",
         "sku": "BS-DRT-PJG",
         "category": "lainnya",
-        "stock": 2000000,
+        "stock": 200,
         "price": 30000,
         "avgBuyPrice": 20000,
         "notes": "Import CSV"
@@ -433,6 +433,27 @@
           "shipping": 0,
           "fee": 0
         }
+      },
+      {
+        "id": 1776094338394,
+        "date": "2026-04-12",
+        "invoice": "INV-035",
+        "productId": 1776092829820,
+        "productName": "Hard Disk 1TB",
+        "sku": "HDD-1TB",
+        "customer": "chikopfs",
+        "qty": 1,
+        "price": 153165,
+        "total": 153165,
+        "profit": 53165,
+        "avgBuyPrice": 100000,
+        "status": "pending",
+        "channel": "Shopee",
+        "note": "",
+        "costs": {
+          "shipping": 0,
+          "fee": 0
+        }
       }
     ],
     "debts": [],
@@ -445,7 +466,7 @@
     },
     "settings": {
       "invoicePrefix": "INV-",
-      "nextInvoiceNumber": 3
+      "nextInvoiceNumber": 4
     }
   }
 }
