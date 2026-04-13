@@ -2198,7 +2198,13 @@
                     el.style.opacity = '0.6';
                     return;
                 }
-                el.textContent = salesSortDir === 'asc' ? '▲' : '▼';
+                const isText = ['invoice','channel','status','product','customer'].includes(k);
+                const isNumber = ['qty','price','total','profit'].includes(k);
+                let tag = '';
+                if (k === 'date') tag = salesSortDir === 'asc' ? '(Terlama)' : '(Terbaru)';
+                else if (isText) tag = salesSortDir === 'asc' ? '(A-Z)' : '(Z-A)';
+                else if (isNumber) tag = salesSortDir === 'asc' ? '(Kecil-Besar)' : '(Besar-Kecil)';
+                el.textContent = tag;
                 el.style.opacity = '1';
             });
 
@@ -2216,8 +2222,13 @@
             };
             const active = document.getElementById('salesSortActive');
             if (active) {
-                const arrow = salesSortDir === 'asc' ? '▲' : '▼';
-                active.textContent = `Urut: ${labelMap[salesSortKey] || salesSortKey} ${arrow}`;
+                const isText = ['invoice','channel','status','product','customer'].includes(salesSortKey);
+                const isNumber = ['qty','price','total','profit'].includes(salesSortKey);
+                let tag = '';
+                if (salesSortKey === 'date') tag = salesSortDir === 'asc' ? 'Terlama' : 'Terbaru';
+                else if (isText) tag = salesSortDir === 'asc' ? 'A-Z' : 'Z-A';
+                else if (isNumber) tag = salesSortDir === 'asc' ? 'Kecil-Besar' : 'Besar-Kecil';
+                active.textContent = `Urut: ${labelMap[salesSortKey] || salesSortKey} • ${tag}`;
             }
         }
 
