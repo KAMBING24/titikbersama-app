@@ -1,7 +1,7 @@
 {
   "app": "titikbersama",
   "version": 1,
-  "exportedAt": "2026-04-13T15:35:04.151Z",
+  "exportedAt": "2026-04-13T15:36:16.300Z",
   "data": {
     "products": [
       {
@@ -51,7 +51,7 @@
         "category": "harddisk",
         "stock": 1,
         "price": 589000,
-        "avgBuyPrice": 450000,
+        "avgBuyPrice": 4500000,
         "notes": "Import CSV"
       }
     ],
@@ -83,8 +83,8 @@
         "productName": "Hard Disk 2TB",
         "supplier": "Rahmat",
         "qty": 1,
-        "price": 45000000,
-        "total": 45000000
+        "price": 4500000,
+        "total": 4500000
       },
       {
         "id": 1776093054017,
@@ -466,7 +466,35 @@
         }
       }
     ],
-    "debts": [],
+    "debts": [
+      {
+        "id": 1776094544714,
+        "investor": "Bagus",
+        "amount": 400000,
+        "paid": 0,
+        "date": "2026-04-01",
+        "interest": 0,
+        "notes": ""
+      },
+      {
+        "id": 1776094559907,
+        "investor": "A Soni",
+        "amount": 850000,
+        "paid": 0,
+        "date": "2026-04-01",
+        "interest": 0,
+        "notes": ""
+      },
+      {
+        "id": 1776094574514,
+        "investor": "Teh ana",
+        "amount": 550000,
+        "paid": 0,
+        "date": "2026-04-02",
+        "interest": 0,
+        "notes": ""
+      }
+    ],
     "payments": [],
     "finance": {
       "openingBalance": 0,
