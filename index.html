@@ -1039,6 +1039,9 @@
                             <button class="btn btn-secondary" onclick="resetSalesSort()" title="Balik ke urutan default (Tanggal terbaru)">
                                 <i class="fas fa-sort"></i> Reset Urut
                             </button>
+                            <span id="salesSortActive" style="padding: 8px 12px; border:1px solid var(--border); border-radius: 10px; background: var(--card-bg); color: var(--text-light); font-weight: 700;">
+                                Urut: Tanggal ▼
+                            </span>
                             <button class="btn btn-secondary" onclick="resetSalesFilters()"><i class="fas fa-rotate-left"></i> Reset</button>
                         </div>
                     </div>
@@ -2195,9 +2198,27 @@
                     el.style.opacity = '0.6';
                     return;
                 }
-                el.textContent = salesSortDir === 'asc' ? ' ▲' : ' ▼';
+                el.textContent = salesSortDir === 'asc' ? '▲' : '▼';
                 el.style.opacity = '1';
             });
+
+            const labelMap = {
+                date: 'Tanggal',
+                invoice: 'No. Faktur',
+                channel: 'Terjual kemana',
+                status: 'Status',
+                product: 'Barang',
+                customer: 'Customer',
+                qty: 'Jumlah',
+                price: 'Harga',
+                total: 'Total',
+                profit: 'Keuntungan'
+            };
+            const active = document.getElementById('salesSortActive');
+            if (active) {
+                const arrow = salesSortDir === 'asc' ? '▲' : '▼';
+                active.textContent = `Urut: ${labelMap[salesSortKey] || salesSortKey} ${arrow}`;
+            }
         }
 
         function setSalesSort(key) {
