@@ -1,0 +1,22 @@
+{
+  "app": "titikbersama",
+  "version": 1,
+  "exportedAt": "2026-04-13T00:00:00Z",
+  "data": {
+    "products": [],
+    "purchases": [],
+    "sales": [],
+    "debts": [],
+    "payments": [],
+    "finance": {
+      "openingBalance": 0,
+      "openingDate": "",
+      "openingNote": "",
+      "transactions": []
+    },
+    "settings": {
+      "invoicePrefix": "INV-",
+      "nextInvoiceNumber": 1
+    }
+  }
+}
