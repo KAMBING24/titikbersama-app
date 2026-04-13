@@ -1562,10 +1562,10 @@
 
         let data = {
             products: [
-                { id: 1, name: 'Harddisk Seagate 1TB', sku: '', category: 'harddisk', stock: 5, reserved: 0, price: 650000, avgBuyPrice: 450000, notes: '' },
-                { id: 2, name: 'Harddisk WD 2TB', sku: '', category: 'harddisk', stock: 3, reserved: 0, price: 950000, avgBuyPrice: 700000, notes: '' },
-                { id: 3, name: 'SSD Samsung 500GB', sku: '', category: 'ssd', stock: 8, reserved: 0, price: 750000, avgBuyPrice: 550000, notes: '' },
-                { id: 4, name: 'SSD Kingston 1TB', sku: '', category: 'ssd', stock: 4, reserved: 0, price: 1200000, avgBuyPrice: 900000, notes: '' }
+                { id: 1, name: 'Harddisk Seagate 1TB', sku: '', category: 'harddisk', stock: 5, price: 650000, avgBuyPrice: 450000, notes: '' },
+                { id: 2, name: 'Harddisk WD 2TB', sku: '', category: 'harddisk', stock: 3, price: 950000, avgBuyPrice: 700000, notes: '' },
+                { id: 3, name: 'SSD Samsung 500GB', sku: '', category: 'ssd', stock: 8, price: 750000, avgBuyPrice: 550000, notes: '' },
+                { id: 4, name: 'SSD Kingston 1TB', sku: '', category: 'ssd', stock: 4, price: 1200000, avgBuyPrice: 900000, notes: '' }
             ],
             purchases: [],
             sales: [],
@@ -1809,9 +1809,6 @@
                 if (!isNaN(avgBuyPrice)) p.avgBuyPrice = Math.max(0, avgBuyPrice);
                 p.notes = notes;
                 p.sku = sku;
-                if (p.reserved == null || isNaN(p.reserved)) p.reserved = 0;
-                if (p.reserved < 0) p.reserved = 0;
-                if (p.reserved > p.stock) p.reserved = p.stock;
                 saveData();
                 renderInventory();
                 updateProductSelects();
@@ -1828,8 +1825,7 @@
                 price,
                 avgBuyPrice: isNaN(avgBuyPrice) ? 0 : Math.max(0, avgBuyPrice),
                 notes,
-                sku,
-                reserved: 0
+                sku
             };
             data.products.push(product);
             saveData();
@@ -1839,22 +1835,6 @@
             showToast('Barang berhasil ditambahkan!', 'success');
         }
 
-        function getReservedStock(product) {
-            return Math.max(0, parseInt(product && product.reserved, 10) || 0);
-        }
-
-        function getAvailableStock(product) {
-            const stock = parseInt(product && product.stock, 10) || 0;
-            return Math.max(0, stock - getReservedStock(product));
-        }
-
-        function normalizeProductStock(product) {
-            if (!product) return;
-            if (product.reserved == null || isNaN(product.reserved)) product.reserved = 0;
-            if (product.reserved < 0) product.reserved = 0;
-            if (product.reserved > product.stock) product.reserved = product.stock;
-        }
-
         function renderInventory(filter = 'all') {
             const grid = document.getElementById('inventoryGrid');
             grid.innerHTML = '';
@@ -1862,11 +1842,8 @@
             const filtered = filter === 'all' ? data.products : data.products.filter(p => p.category === filter);
             
             filtered.forEach(product => {
-                normalizeProductStock(product);
                 const profit = product.price - product.avgBuyPrice;
                 const profitPercent = product.avgBuyPrice > 0 ? ((profit / product.avgBuyPrice) * 100).toFixed(1) : 0;
-                const reserved = getReservedStock(product);
-                const available = getAvailableStock(product);
                 
                 const card = document.createElement('div');
                 card.className = 'inventory-card';
@@ -1883,16 +1860,8 @@
                     </div>
                     <div class="inventory-stats">
                         <div class="inventory-stat">
-                            <div class="inventory-stat-value">${available}</div>
-                            <div class="inventory-stat-label">Stok Tersedia</div>
-                        </div>
-                        <div class="inventory-stat">
-                            <div class="inventory-stat-value">${reserved}</div>
-                            <div class="inventory-stat-label">Reserved</div>
-                        </div>
-                        <div class="inventory-stat">
                             <div class="inventory-stat-value">${product.stock}</div>
-                            <div class="inventory-stat-label">Stok Fisik</div>
+                            <div class="inventory-stat-label">Stok</div>
                         </div>
                         <div class="inventory-stat">
                             <div class="inventory-stat-value">Rp ${formatNumber(product.price)}</div>
@@ -2114,31 +2083,14 @@
                 }
                 const oldP = data.products.find(p => p.id === old.productId);
                 const oldStatus = (old.status || '').toString().toLowerCase();
-                if (oldP) {
-                    normalizeProductStock(oldP);
-                    if (oldStatus === 'pending') oldP.reserved = Math.max(0, getReservedStock(oldP) - old.qty);
-                    if (oldStatus === 'success') oldP.stock += old.qty;
-                    normalizeProductStock(oldP);
-                }
+                if (oldP && oldStatus !== 'cancel') oldP.stock += old.qty;
 
-                normalizeProductStock(product);
-                const availableNow = getAvailableStock(product);
-                const willReserve = status === 'pending';
-                const willSell = status === 'success';
-                if ((willReserve || willSell) && availableNow < qty) {
-                    // rollback revert effect
-                    if (oldP) {
-                        if (oldStatus === 'pending') oldP.reserved = getReservedStock(oldP) + old.qty;
-                        if (oldStatus === 'success') oldP.stock -= old.qty;
-                        normalizeProductStock(oldP);
-                    }
-                    showToast('Stok tersedia tidak mencukupi (karena ada reserved)!', 'error');
-                    return;
-                }
-
-                if (willReserve) product.reserved = getReservedStock(product) + qty;
-                if (willSell) product.stock -= qty;
-                normalizeProductStock(product);
+                const willAffectStock = status !== 'cancel';
+                const stockBefore = product.stock;
+                if (willAffectStock) product.stock -= qty;
+                const stockAfter = product.stock;
+                const shortageQty = willAffectStock && stockAfter < 0 ? Math.abs(Math.min(0, stockAfter)) : 0;
+                const unitCostEstimate = product.avgBuyPrice > 0 ? product.avgBuyPrice : Math.max(0, Math.round(salePrice * 0.7));
 
                 const profit = qty * (salePrice - product.avgBuyPrice);
                 old.date = document.getElementById('saleDate').value;
@@ -2158,22 +2110,20 @@
                 old.sku = product.sku || '';
 
                 upsertSaleCostExpense(old);
+                upsertStockDebtForSale(old, shortageQty, unitCostEstimate);
                 saveData();
                 renderSales();
                 renderInventory();
                 updateProductSelects();
                 updateDashboard();
+                renderDebt();
                 closeModal();
                 showToast('Penjualan diperbarui', 'success');
                 return;
             }
 
-            normalizeProductStock(product);
-            const availableNow = getAvailableStock(product);
-            if ((status === 'pending' || status === 'success') && availableNow < qty) {
-                showToast('Stok tersedia tidak mencukupi (karena ada reserved)!', 'error');
-                return;
-            }
+            const willAffectStock = status !== 'cancel';
+            const stockBefore = product.stock;
 
             const profit = qty * (salePrice - product.avgBuyPrice);
 
@@ -2197,16 +2147,19 @@
             };
 
             data.sales.push(sale);
-            if (status === 'pending') product.reserved = getReservedStock(product) + qty;
-            if (status === 'success') product.stock -= qty;
-            normalizeProductStock(product);
+            if (willAffectStock) product.stock -= qty;
+            const stockAfter = product.stock;
+            const shortageQty = willAffectStock && stockAfter < 0 ? Math.abs(Math.min(0, stockAfter)) : 0;
+            const unitCostEstimate = product.avgBuyPrice > 0 ? product.avgBuyPrice : Math.max(0, Math.round(salePrice * 0.7));
 
             upsertSaleCostExpense(sale);
+            upsertStockDebtForSale(sale, shortageQty, unitCostEstimate);
             saveData();
             renderSales();
             renderInventory();
             updateProductSelects();
             updateDashboard();
+            renderDebt();
             closeModal();
             showToast(`Penjualan tercatat! Keuntungan: Rp ${formatNumber(profit)}`, 'success');
         }
@@ -2260,7 +2213,7 @@
             const statusColor = st === 'success' ? 'var(--success)' : (st === 'cancel' ? 'var(--danger)' : 'var(--warning)');
 
             const p = data.products.find(x => x.id === sale.productId);
-            const reservedInfo = p ? `Tersedia: ${getAvailableStock(p)} • Reserved: ${getReservedStock(p)} • Fisik: ${p.stock}` : '-';
+            const stockInfo = p ? `Stok: ${p.stock}` : '-';
             const costs = sale.costs || {};
             const shipping = parseInt(costs.shipping, 10) || 0;
             const fee = parseInt(costs.fee, 10) || 0;
@@ -2280,7 +2233,7 @@
                 <div class="analysis-item"><div class="analysis-label"><strong>Ongkir</strong></div><div class="analysis-value">Rp ${formatNumber(shipping)}</div></div>
                 <div class="analysis-item"><div class="analysis-label"><strong>Fee</strong></div><div class="analysis-value">Rp ${formatNumber(fee)}</div></div>
                 <div class="analysis-item"><div class="analysis-label"><strong>Net Profit</strong></div><div class="analysis-value" style="color:${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}">Rp ${formatNumber(netProfit)}</div></div>
-                <div class="analysis-item"><div class="analysis-label"><strong>Stok barang sekarang</strong></div><div class="analysis-value">${reservedInfo}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Stok barang sekarang</strong></div><div class="analysis-value">${stockInfo}</div></div>
                 <div style="padding: 12px; background:#f8fafc; border-radius: 10px; border:1px solid var(--border);">
                     <div style="font-weight:700; margin-bottom:6px;">Catatan</div>
                     <div style="color:var(--text-light);">${sale.note ? sale.note : '—'}</div>
@@ -2593,10 +2546,10 @@
             document.getElementById('profitMargin').className = `stat-change ${totalProfit >= 0 ? 'positive' : 'negative'}`;
             
             // Low stock alert
-            const lowStock = data.products.filter(p => getAvailableStock(p) <= 3);
+            const lowStock = data.products.filter(p => p.stock <= 3);
             const alertHtml = lowStock.map(p => `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; margin-bottom: 8px; border-left: 4px solid var(--danger);">
-                    <span><strong>${p.name}</strong> - Tersedia: ${getAvailableStock(p)} pcs (Reserved: ${getReservedStock(p)})</span>
+                    <span><strong>${p.name}</strong> - Stok: ${p.stock} pcs</span>
                     <span class="badge badge-danger">Restock!</span>
                 </div>
             `).join('');
@@ -2634,6 +2587,37 @@
             if (!data.finance) data.finance = { openingBalance: 0, openingDate: '', openingNote: '', transactions: [] };
             if (!Array.isArray(data.finance.transactions)) data.finance.transactions = [];
             return data.finance;
+        }
+
+        function upsertStockDebtForSale(sale, shortageQty, unitCostEstimate) {
+            // Create/update a debt entry tied to a sale when stock goes negative.
+            // The amount is an estimate (can be adjusted later via edit debt).
+            const refId = sale.id;
+            const idx = data.debts.findIndex(d => d && d.refKind === 'stock_debt' && d.refId === refId);
+            const amount = Math.max(0, (parseInt(shortageQty, 10) || 0) * (parseInt(unitCostEstimate, 10) || 0));
+
+            if (amount <= 0 || (sale.status || '').toString().toLowerCase() === 'cancel') {
+                if (idx >= 0) data.debts.splice(idx, 1);
+                return;
+            }
+
+            const investor = `Hutang Stok • ${sale.productName || 'Barang'}`;
+            const notes = `Auto dari penjualan ${sale.invoice || '-'} (stok minus ${shortageQty} pcs). Nominal estimasi.`;
+            const debt = {
+                id: idx >= 0 ? data.debts[idx].id : Date.now() + Math.floor(Math.random() * 100000),
+                investor,
+                amount,
+                paid: idx >= 0 ? (data.debts[idx].paid || 0) : 0,
+                date: sale.date,
+                interest: 0,
+                notes,
+                refKind: 'stock_debt',
+                refId
+            };
+            // Clamp paid not exceed amount
+            if (debt.paid > debt.amount) debt.paid = debt.amount;
+            if (idx >= 0) data.debts[idx] = debt;
+            else data.debts.push(debt);
         }
 
         function upsertSaleCostExpense(sale) {
@@ -3292,11 +3276,9 @@
                 if (!select) return;
                 select.innerHTML = '';
                 data.products.forEach(p => {
-                    normalizeProductStock(p);
-                    const available = getAvailableStock(p);
                     const option = document.createElement('option');
                     option.value = p.id;
-                    option.textContent = `${p.name} (Tersedia: ${available}, Reserved: ${getReservedStock(p)})`;
+                    option.textContent = `${p.name} (Stok: ${p.stock})`;
                     select.appendChild(option);
                 });
             });
@@ -3351,10 +3333,6 @@
         function migrateDataShape() {
             (data.products || []).forEach(p => {
                 if (p.sku === undefined) p.sku = '';
-                if (p.reserved === undefined) p.reserved = 0;
-                if (typeof p.reserved !== 'number' || isNaN(p.reserved)) p.reserved = 0;
-                if (p.reserved < 0) p.reserved = 0;
-                if (typeof p.stock === 'number' && p.reserved > p.stock) p.reserved = p.stock;
             });
             (data.sales || []).forEach(s => {
                 if (s.invoice === undefined) s.invoice = '';
@@ -3372,6 +3350,10 @@
                 if (!s.costs) s.costs = { shipping: 0, fee: 0 };
                 if (s.costs.shipping === undefined) s.costs.shipping = 0;
                 if (s.costs.fee === undefined) s.costs.fee = 0;
+            });
+            (data.debts || []).forEach(d => {
+                if (d.refKind === undefined) d.refKind = '';
+                if (d.refId === undefined) d.refId = null;
             });
             if (!data.finance) {
                 data.finance = { openingBalance: 0, openingDate: '', openingNote: '', transactions: [] };
@@ -3534,16 +3516,13 @@
                 const sale = data.sales.find(s => s.id === id);
                 const product = data.products.find(p => p.id === sale.productId);
                 const status = (sale && sale.status || '').toString().toLowerCase();
-                if (product) {
-                    normalizeProductStock(product);
-                    if (status === 'pending') product.reserved = Math.max(0, getReservedStock(product) - sale.qty);
-                    if (status === 'success') product.stock += sale.qty;
-                    normalizeProductStock(product);
-                }
+                if (product && status !== 'cancel') product.stock += sale.qty;
                 if (sale) {
                     // remove linked expense if any
                     const f = ensureFinance();
                     f.transactions = (f.transactions || []).filter(t => !(t && t.refKind === 'sale_cost' && t.refId === sale.id));
+                    // remove linked stock debt if any
+                    data.debts = (data.debts || []).filter(d => !(d && d.refKind === 'stock_debt' && d.refId === sale.id));
                 }
                 data.sales = data.sales.filter(s => s.id !== id);
                 saveData();
@@ -3551,6 +3530,7 @@
                 renderInventory();
                 updateProductSelects();
                 updateDashboard();
+                renderDebt();
                 showToast('Penjualan dihapus', 'success');
             }
         }
