@@ -3143,6 +3143,29 @@
             return hasFaktur && hasProduk;
         }
 
+        function isInventoryHeader(headerMap) {
+            const keys = Object.keys(headerMap);
+            const hasStock = keys.some(k => k.includes('stok') || k.includes('stock'));
+            const hasName = keys.some(k => k.includes('produk') || k.includes('barang') || k.includes('nama'));
+            const hasFaktur = keys.some(k => k.includes('faktur'));
+            return hasStock && hasName && !hasFaktur;
+        }
+
+        function isDebtHeader(headerMap) {
+            const keys = Object.keys(headerMap);
+            const hasInvestor = keys.some(k => k.includes('investor'));
+            const hasDebtAmount = keys.some(k => k.includes('hutang') || k.includes('pinjam') || k.includes('amount'));
+            return hasInvestor && hasDebtAmount;
+        }
+
+        function isPurchaseHeader(headerMap) {
+            const keys = Object.keys(headerMap);
+            const hasSupplier = keys.some(k => k.includes('supplier'));
+            const hasBuyPrice = keys.some(k => k.includes('harga beli') || k.includes('harga modal') || k.includes('modal'));
+            const hasProduct = keys.some(k => k.includes('produk') || k.includes('barang'));
+            return hasSupplier || (hasBuyPrice && hasProduct);
+        }
+
         function importRekapRow(cols, get, seenInvoices) {
             const invoice = get('no faktur', 'no. faktur', 'nofaktur').trim();
             if (!invoice) return { ok: false, reason: 'empty' };
@@ -3191,6 +3214,95 @@
             };
 
             data.sales.push(sale);
+            return { ok: true };
+        }
+
+        function importInventoryRow(get) {
+            const sku = get('sku', 'kode barang', 'kode').trim();
+            const name = get('produk', 'barang', 'nama barang', 'nama produk', 'nama').trim() || sku || 'Tanpa nama';
+            const category = (get('kategori', 'category').trim().toLowerCase() || guessCategory(name));
+            const stock = parseInt(String(get('stok', 'stock', 'qty', 'jumlah')).replace(/\D/g, ''), 10) || 0;
+            const sellPrice = parseMoneyId(get('harga jual', 'harga', 'harga jual/pcs'));
+            const buyPrice = parseMoneyId(get('harga beli', 'harga modal', 'avg buy', 'harga beli rata-rata'));
+            const notes = get('catatan', 'notes').trim();
+
+            let product = sku
+                ? data.products.find(p => p.sku && p.sku.toLowerCase() === sku.toLowerCase())
+                : data.products.find(p => p.name.toLowerCase() === name.toLowerCase());
+
+            const normalizedCategory = ['harddisk', 'ssd', 'lainnya'].includes(category) ? category : guessCategory(name);
+            if (product) {
+                product.name = name;
+                product.sku = sku || product.sku || '';
+                product.category = normalizedCategory;
+                product.stock = stock;
+                if (sellPrice > 0) product.price = sellPrice;
+                if (buyPrice >= 0) product.avgBuyPrice = buyPrice;
+                if (notes) product.notes = notes;
+                return { ok: true, mode: 'update' };
+            }
+
+            data.products.push({
+                id: Date.now() + Math.floor(Math.random() * 100000),
+                name,
+                sku,
+                category: normalizedCategory,
+                stock,
+                price: sellPrice > 0 ? sellPrice : 0,
+                avgBuyPrice: buyPrice >= 0 ? buyPrice : 0,
+                notes: notes || 'Import inventory'
+            });
+            return { ok: true, mode: 'create' };
+        }
+
+        function importPurchaseRow(get, idx) {
+            const date = parseDateId(get('tanggal', 'date'));
+            const sku = get('sku', 'kode barang').trim();
+            const productName = get('produk', 'barang', 'nama barang', 'nama').trim() || 'Unknown';
+            const supplier = get('supplier', 'vendor', 'penjual').trim() || 'Unknown';
+            const qty = parseInt(String(get('qty', 'jumlah', 'stok')).replace(/\D/g, ''), 10) || 0;
+            const price = parseMoneyId(get('harga beli', 'harga modal', 'harga', 'price'));
+            const totalRaw = parseMoneyId(get('total', 'total beli', 'total modal'));
+            const total = totalRaw > 0 ? totalRaw : qty * price;
+
+            const unitCost = qty > 0 ? Math.round(total / qty) : price;
+            let product = findOrCreateProductForImport(sku, productName, 0, unitCost);
+            if (sku) product.sku = sku;
+
+            const purchase = {
+                id: Date.now() + idx,
+                date,
+                productId: product.id,
+                productName: product.name,
+                supplier,
+                qty,
+                price: unitCost,
+                total
+            };
+            data.purchases.push(purchase);
+            applyPurchaseToInventory(product.id, purchase.qty, purchase.price);
+            return { ok: true };
+        }
+
+        function importDebtRow(get, idx) {
+            const investor = get('investor', 'nama investor', 'kreditur').trim();
+            if (!investor) return { ok: false, reason: 'empty' };
+            const amountRaw = parseMoneyId(get('jumlah hutang', 'hutang', 'amount', 'total hutang', 'pinjaman'));
+            const paidRaw = parseMoneyId(get('terbayar', 'dibayar', 'paid', 'bayar'));
+            const remainingRaw = parseMoneyId(get('sisa', 'remaining'));
+            const amount = amountRaw > 0 ? amountRaw : Math.max(0, paidRaw + remainingRaw);
+            if (amount <= 0) return { ok: false, reason: 'empty' };
+            const paid = Math.min(Math.max(0, paidRaw), amount);
+            const debt = {
+                id: Date.now() + idx + 500000,
+                investor,
+                amount,
+                paid,
+                date: parseDateId(get('tanggal', 'tgl', 'tanggal pinjam', 'date')),
+                interest: parseFloat(String(get('bunga', 'interest')).replace(',', '.')) || 0,
+                notes: get('catatan', 'notes', 'keterangan').trim()
+            };
+            data.debts.push(debt);
             return { ok: true };
         }
 
@@ -3250,55 +3362,65 @@
                 return;
             }
 
+            if (isInventoryHeader(headerMap)) {
+                let created = 0;
+                let updated = 0;
+                for (let i = 1; i < rows.length; i++) {
+                    const cols = rows[i];
+                    if (!cols.length || cols.every(c => !String(c).trim())) continue;
+                    const get = makeColGetter(cols, headerMap);
+                    const res = importInventoryRow(get);
+                    if (res.ok && res.mode === 'create') created++;
+                    if (res.ok && res.mode === 'update') updated++;
+                }
+                saveData();
+                updateDashboard();
+                renderInventory();
+                updateProductSelects();
+                showToast(`Import inventory: ${created} baru • ${updated} diperbarui`, 'success');
+                return;
+            }
+
+            if (isDebtHeader(headerMap)) {
+                let imported = 0;
+                let skipped = 0;
+                for (let i = 1; i < rows.length; i++) {
+                    const cols = rows[i];
+                    if (!cols.length || cols.every(c => !String(c).trim())) continue;
+                    const get = makeColGetter(cols, headerMap);
+                    const res = importDebtRow(get, i);
+                    if (res.ok) imported++;
+                    else skipped++;
+                }
+                saveData();
+                updateDashboard();
+                renderDebt();
+                showToast(`Import hutang: ${imported} masuk` + (skipped ? ` • ${skipped} dilewati` : ''), imported ? 'success' : 'warning');
+                return;
+            }
+
             const adjustStock = document.getElementById('csvAdjustStock') && document.getElementById('csvAdjustStock').checked;
-            const hasSupplierHeader = hKeys.some(k => k.includes('supplier'));
+            const purchaseMode = isPurchaseHeader(headerMap);
             let imported = 0;
 
             for (let i = 1; i < rows.length; i++) {
                 const cols = rows[i];
                 if (!cols.length || cols.every(c => !String(c).trim())) continue;
+                const get = makeColGetter(cols, headerMap);
 
-                const isPurchase = hasSupplierHeader || cols.some(c => String(c).toLowerCase().includes('supplier'));
-
-                if (isPurchase) {
-                    const purchase = {
-                        id: Date.now() + i,
-                        date: parseDateId(cols[0]),
-                        productName: cols[1] || 'Unknown',
-                        supplier: cols[2] || 'Unknown',
-                        qty: parseInt(String(cols[3]).replace(/\D/g, ''), 10) || 0,
-                        price: parseMoneyId(cols[4]),
-                        total: 0
-                    };
-                    purchase.total = purchase.qty * purchase.price;
-
-                    let product = data.products.find(p => p.name.toLowerCase() === purchase.productName.toLowerCase());
-                    if (!product) {
-                        product = {
-                            id: Date.now() + i + 1000,
-                            name: purchase.productName,
-                            sku: '',
-                            category: 'harddisk',
-                            stock: 0,
-                            price: purchase.price > 0 ? Math.round(purchase.price * 1.3) : 0,
-                            avgBuyPrice: 0,
-                            notes: 'Imported from CSV'
-                        };
-                        data.products.push(product);
-                    }
-
-                    purchase.productId = product.id;
-                    data.purchases.push(purchase);
-                    applyPurchaseToInventory(product.id, purchase.qty, purchase.price);
+                if (purchaseMode) {
+                    const res = importPurchaseRow(get, i);
+                    if (res.ok) imported++;
+                    continue;
                 } else {
                     const sale = {
                         id: Date.now() + i,
-                        date: parseDateId(cols[0]),
+                        date: parseDateId(get('tanggal', 'date') || cols[0]),
                         invoice: '',
-                        productName: cols[1] || 'Unknown',
-                        customer: cols[2] || 'Unknown',
-                        qty: parseInt(String(cols[3]).replace(/\D/g, ''), 10) || 0,
-                        price: parseMoneyId(cols[4]),
+                        productName: get('produk', 'barang', 'nama') || cols[1] || 'Unknown',
+                        customer: get('customer', 'pembeli') || cols[2] || 'Unknown',
+                        qty: parseInt(String(get('qty', 'jumlah') || cols[3] || '').replace(/\D/g, ''), 10) || 0,
+                        price: parseMoneyId(get('harga jual', 'harga', 'price') || cols[4]),
                         total: 0,
                         profit: 0,
                         sku: ''
