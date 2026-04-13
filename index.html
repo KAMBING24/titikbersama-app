@@ -976,17 +976,67 @@
                 <div class="header">
                     <h1>Catatan Penjualan</h1>
                     <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="exportSalesPdf()">
+                            <i class="fas fa-file-pdf"></i> Export PDF (Filter)
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportSalesCsv()">
+                            <i class="fas fa-file-csv"></i> Export CSV (Filter)
+                        </button>
                         <button class="btn btn-success" onclick="openModal('addSale')">
                             <i class="fas fa-plus"></i> Tambah Penjualan
                         </button>
                     </div>
                 </div>
 
+                <div class="stats-grid" style="margin-bottom: 20px;">
+                    <div class="stat-card info">
+                        <div class="stat-icon"><i class="fas fa-list-check"></i></div>
+                        <div class="stat-value" id="salesCountFiltered">0</div>
+                        <div class="stat-label">Total (sesuai filter)</div>
+                    </div>
+                    <div class="stat-card profit">
+                        <div class="stat-icon"><i class="fas fa-circle-plus"></i></div>
+                        <div class="stat-value" id="salesRevenueSuccess">Rp 0</div>
+                        <div class="stat-label">Omzet Sukses</div>
+                    </div>
+                    <div class="stat-card pending">
+                        <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+                        <div class="stat-value" id="salesPendingEst">Rp 0</div>
+                        <div class="stat-label">Estimasi Pending</div>
+                    </div>
+                    <div class="stat-card loss">
+                        <div class="stat-icon"><i class="fas fa-receipt"></i></div>
+                        <div class="stat-value" id="salesCostsSuccess">Rp 0</div>
+                        <div class="stat-label">Biaya Penjualan (Sukses)</div>
+                    </div>
+                </div>
+
                 <div class="table-container">
                     <div class="table-header">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" placeholder="Cari penjualan..." onkeyup="searchTable('salesTable', this.value)">
+                        <div style="display:flex; gap: 12px; flex-wrap: wrap; width: 100%; align-items: center;">
+                            <div class="search-box" style="flex: 1; min-width: 220px;">
+                                <i class="fas fa-search"></i>
+                                <input id="salesQuery" type="text" placeholder="Cari: faktur / barang / customer / catatan..." oninput="renderSales()">
+                            </div>
+                            <select class="form-select" id="salesStatusFilter" style="min-width: 150px;" onchange="renderSales()">
+                                <option value="">Semua status</option>
+                                <option value="success">Sukses</option>
+                                <option value="pending">Pending</option>
+                                <option value="cancel">Cancel</option>
+                            </select>
+                            <select class="form-select" id="salesChannelFilter" style="min-width: 160px;" onchange="renderSales()">
+                                <option value="">Semua channel</option>
+                                <option value="Shopee">Shopee</option>
+                                <option value="Tokopedia">Tokopedia</option>
+                                <option value="Facebook">Facebook</option>
+                                <option value="Instagram">Instagram</option>
+                                <option value="WhatsApp">WhatsApp</option>
+                                <option value="Offline">Offline</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                            <input type="date" class="form-input" id="salesDateFrom" style="min-width: 160px;" onchange="renderSales()">
+                            <input type="date" class="form-input" id="salesDateTo" style="min-width: 160px;" onchange="renderSales()">
+                            <button class="btn btn-secondary" onclick="resetSalesFilters()"><i class="fas fa-rotate-left"></i> Reset</button>
                         </div>
                     </div>
                     <table id="salesTable">
@@ -1305,6 +1355,20 @@
                         <input type="text" class="form-input" id="saleNote" placeholder="Contoh: ongkir, biaya admin, dll">
                     </div>
                     <div class="form-group">
+                        <label class="form-label">Ongkir (Rp)</label>
+                        <input type="number" class="form-input" id="saleShipping" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fee Admin/Marketplace (Rp)</label>
+                        <input type="number" class="form-input" id="saleFee" min="0" value="0">
+                    </div>
+                    <div class="form-group full" style="margin-top:-6px;">
+                        <div style="padding: 10px 12px; background:#f8fafc; border:1px solid var(--border); border-radius: 10px; display:flex; justify-content: space-between; gap: 12px;">
+                            <div style="font-weight:700;">Net Profit (setelah biaya)</div>
+                            <div id="saleNetProfit" style="font-weight:800;">Rp 0</div>
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Jumlah</label>
                         <input type="number" class="form-input" id="saleQty" required min="1" onchange="calculateSaleProfit()">
                     </div>
@@ -1329,6 +1393,21 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal()">Batal</button>
                 <button class="btn btn-success" onclick="saveSale()">Simpan Penjualan</button>
+            </div>
+        </div>
+
+        <!-- Sale Preview Modal -->
+        <div class="modal" id="salePreviewModal" style="display:none">
+            <div class="modal-header">
+                <h2 class="modal-title">Detail Penjualan</h2>
+                <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="salePreviewBody" style="display:grid; gap: 12px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Tutup</button>
+                <button class="btn btn-primary" onclick="openSaleEditFromPreview()"><i class="fas fa-edit"></i> Edit</button>
             </div>
         </div>
 
@@ -1479,6 +1558,7 @@
         let editingSaleId = null;
         let editingPurchaseId = null;
         let editingCashTxnId = null;
+        let previewSaleId = null;
 
         let data = {
             products: [
@@ -1498,6 +1578,10 @@
                 openingDate: '',
                 openingNote: '',
                 transactions: []
+            },
+            settings: {
+                invoicePrefix: 'INV-',
+                nextInvoiceNumber: 1
             }
         };
 
@@ -1671,11 +1755,17 @@
                         document.getElementById('saleStatus').value = (s.status || 'pending');
                         document.getElementById('saleChannel').value = (s.channel || s.method || 'Shopee');
                         document.getElementById('saleNote').value = s.note || '';
+                        document.getElementById('saleShipping').value = (s.costs && s.costs.shipping) ? s.costs.shipping : 0;
+                        document.getElementById('saleFee').value = (s.costs && s.costs.fee) ? s.costs.fee : 0;
                         calculateSaleProfit();
                     }
                 } else {
                     document.getElementById('saleDate').valueAsDate = new Date();
                     updateSaleInfo();
+                    document.getElementById('saleInvoice').value = generateNextInvoice();
+                    document.getElementById('saleShipping').value = 0;
+                    document.getElementById('saleFee').value = 0;
+                    calculateSaleProfit();
                 }
                 return;
             }
@@ -1693,6 +1783,7 @@
             editingSaleId = null;
             editingPurchaseId = null;
             editingCashTxnId = null;
+            previewSaleId = null;
         }
 
         // Product Management
@@ -1977,15 +2068,23 @@
             const product = data.products.find(p => p.id === productId);
             const qty = parseInt(document.getElementById('saleQty').value, 10) || 0;
             const salePrice = parseInt(document.getElementById('salePrice').value, 10) || 0;
+            const shipping = parseInt(document.getElementById('saleShipping').value, 10) || 0;
+            const fee = parseInt(document.getElementById('saleFee').value, 10) || 0;
             
             if (product) {
                 const total = qty * salePrice;
                 const profit = qty * (salePrice - product.avgBuyPrice);
+                const netProfit = profit - (shipping + fee);
                 
                 document.getElementById('saleTotal').value = 'Rp ' + formatNumber(total);
                 document.getElementById('saleProfit').value = 'Rp ' + formatNumber(profit) + 
                     (profit >= 0 ? ' (Untung)' : ' (Rugi)');
                 document.getElementById('saleProfit').style.color = profit >= 0 ? 'var(--success)' : 'var(--danger)';
+                const netEl = document.getElementById('saleNetProfit');
+                if (netEl) {
+                    netEl.textContent = 'Rp ' + formatNumber(netProfit);
+                    netEl.style.color = netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+                }
             }
         }
 
@@ -1994,10 +2093,13 @@
             const qty = parseInt(document.getElementById('saleQty').value, 10);
             const salePrice = parseInt(document.getElementById('salePrice').value, 10);
             const product = data.products.find(p => p.id === productId);
-            const invoice = (document.getElementById('saleInvoice').value || '').trim();
+            const invoiceInput = (document.getElementById('saleInvoice').value || '').trim();
             const status = (document.getElementById('saleStatus').value || 'pending').trim();
             const channel = (document.getElementById('saleChannel').value || 'Shopee').trim();
             const note = (document.getElementById('saleNote').value || '').trim();
+            const shipping = parseInt(document.getElementById('saleShipping').value, 10) || 0;
+            const fee = parseInt(document.getElementById('saleFee').value, 10) || 0;
+            const invoice = invoiceInput || generateNextInvoice();
 
             if (!product) {
                 showToast('Pilih barang yang valid', 'error');
@@ -2052,8 +2154,10 @@
                 old.status = status;
                 old.channel = channel;
                 old.note = note;
+                old.costs = { shipping, fee };
                 old.sku = product.sku || '';
 
+                upsertSaleCostExpense(old);
                 saveData();
                 renderSales();
                 renderInventory();
@@ -2088,7 +2192,8 @@
                 avgBuyPrice: product.avgBuyPrice,
                 status,
                 channel,
-                note
+                note,
+                costs: { shipping, fee }
             };
 
             data.sales.push(sale);
@@ -2096,6 +2201,7 @@
             if (status === 'success') product.stock -= qty;
             normalizeProductStock(product);
 
+            upsertSaleCostExpense(sale);
             saveData();
             renderSales();
             renderInventory();
@@ -2105,11 +2211,108 @@
             showToast(`Penjualan tercatat! Keuntungan: Rp ${formatNumber(profit)}`, 'success');
         }
 
+        function resetSalesFilters() {
+            const q = document.getElementById('salesQuery'); if (q) q.value = '';
+            const st = document.getElementById('salesStatusFilter'); if (st) st.value = '';
+            const ch = document.getElementById('salesChannelFilter'); if (ch) ch.value = '';
+            const df = document.getElementById('salesDateFrom'); if (df) df.value = '';
+            const dt = document.getElementById('salesDateTo'); if (dt) dt.value = '';
+            renderSales();
+        }
+
+        function getFilteredSales() {
+            const query = (document.getElementById('salesQuery') ? document.getElementById('salesQuery').value : '').trim().toLowerCase();
+            const statusFilter = (document.getElementById('salesStatusFilter') ? document.getElementById('salesStatusFilter').value : '').trim().toLowerCase();
+            const channelFilter = (document.getElementById('salesChannelFilter') ? document.getElementById('salesChannelFilter').value : '').trim().toLowerCase();
+            const from = (document.getElementById('salesDateFrom') ? document.getElementById('salesDateFrom').value : '').trim();
+            const to = (document.getElementById('salesDateTo') ? document.getElementById('salesDateTo').value : '').trim();
+
+            return [...data.sales]
+                .filter(s => {
+                    const st = (s.status || 'pending').toString().toLowerCase();
+                    const ch = (s.channel || '').toString().toLowerCase();
+                    if (statusFilter && st !== statusFilter) return false;
+                    if (channelFilter && ch !== channelFilter) return false;
+                    if (from && new Date(s.date) < new Date(from)) return false;
+                    if (to && new Date(s.date) > new Date(to)) return false;
+                    if (!query) return true;
+                    const hay = [
+                        s.invoice, s.productName, s.customer, s.channel, s.note, s.sku
+                    ].filter(Boolean).join(' ').toLowerCase();
+                    return hay.includes(query);
+                })
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        function openSalePreview(id) {
+            const sale = data.sales.find(s => s.id === id);
+            if (!sale) {
+                showToast('Data penjualan tidak ditemukan', 'error');
+                return;
+            }
+            previewSaleId = id;
+            document.getElementById('modalOverlay').classList.add('active');
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+            document.getElementById('salePreviewModal').style.display = 'block';
+
+            const st = (sale.status || 'pending').toString().toLowerCase();
+            const statusLabel = st === 'success' ? 'Sukses' : (st === 'cancel' ? 'Cancel' : 'Pending');
+            const statusColor = st === 'success' ? 'var(--success)' : (st === 'cancel' ? 'var(--danger)' : 'var(--warning)');
+
+            const p = data.products.find(x => x.id === sale.productId);
+            const reservedInfo = p ? `Tersedia: ${getAvailableStock(p)} • Reserved: ${getReservedStock(p)} • Fisik: ${p.stock}` : '-';
+            const costs = sale.costs || {};
+            const shipping = parseInt(costs.shipping, 10) || 0;
+            const fee = parseInt(costs.fee, 10) || 0;
+            const netProfit = (sale.profit || 0) - (shipping + fee);
+
+            document.getElementById('salePreviewBody').innerHTML = `
+                <div class="analysis-item"><div class="analysis-label"><strong>No. Faktur</strong></div><div class="analysis-value">${sale.invoice || '—'}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Tanggal</strong></div><div class="analysis-value">${formatDate(sale.date)}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Status</strong></div><div class="analysis-value" style="color:${statusColor}">${statusLabel}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Terjual kemana</strong></div><div class="analysis-value">${sale.channel || '—'}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Barang</strong></div><div class="analysis-value">${sale.productName || '—'} ${sale.sku ? `<span style="color:var(--text-light);font-weight:600;">(SKU: ${sale.sku})</span>` : ''}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Customer</strong></div><div class="analysis-value">${sale.customer || '—'}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Qty</strong></div><div class="analysis-value">${sale.qty} pcs</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Harga/pcs</strong></div><div class="analysis-value">Rp ${formatNumber(sale.price)}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Total</strong></div><div class="analysis-value">Rp ${formatNumber(sale.total)}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Profit</strong></div><div class="analysis-value" style="color:${(sale.profit||0) >= 0 ? 'var(--success)' : 'var(--danger)'}">Rp ${formatNumber(sale.profit || 0)}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Ongkir</strong></div><div class="analysis-value">Rp ${formatNumber(shipping)}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Fee</strong></div><div class="analysis-value">Rp ${formatNumber(fee)}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Net Profit</strong></div><div class="analysis-value" style="color:${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}">Rp ${formatNumber(netProfit)}</div></div>
+                <div class="analysis-item"><div class="analysis-label"><strong>Stok barang sekarang</strong></div><div class="analysis-value">${reservedInfo}</div></div>
+                <div style="padding: 12px; background:#f8fafc; border-radius: 10px; border:1px solid var(--border);">
+                    <div style="font-weight:700; margin-bottom:6px;">Catatan</div>
+                    <div style="color:var(--text-light);">${sale.note ? sale.note : '—'}</div>
+                </div>
+            `;
+        }
+
+        function openSaleEditFromPreview() {
+            if (!previewSaleId) return;
+            openModal('addSale', previewSaleId);
+        }
+
         function renderSales() {
             const tbody = document.getElementById('salesBody');
             tbody.innerHTML = '';
             
-            const sorted = [...data.sales].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const sorted = getFilteredSales();
+
+            // Quick stats (based on filtered set)
+            const count = sorted.length;
+            const revenueSuccess = sorted.filter(s => (s.status || '').toString().toLowerCase() === 'success').reduce((a, b) => a + (b.total || 0), 0);
+            const pendingEst = sorted.filter(s => (s.status || '').toString().toLowerCase() === 'pending').reduce((a, b) => a + (b.total || 0), 0);
+            const costsSuccess = sorted
+                .filter(s => (s.status || '').toString().toLowerCase() === 'success')
+                .reduce((a, b) => {
+                    const c = b.costs || {};
+                    return a + (parseInt(c.shipping, 10) || 0) + (parseInt(c.fee, 10) || 0);
+                }, 0);
+            const cEl = document.getElementById('salesCountFiltered'); if (cEl) cEl.textContent = String(count);
+            const rEl = document.getElementById('salesRevenueSuccess'); if (rEl) rEl.textContent = 'Rp ' + formatNumber(revenueSuccess);
+            const pEl = document.getElementById('salesPendingEst'); if (pEl) pEl.textContent = 'Rp ' + formatNumber(pendingEst);
+            const bEl = document.getElementById('salesCostsSuccess'); if (bEl) bEl.textContent = 'Rp ' + formatNumber(costsSuccess);
             
             sorted.forEach(sale => {
                 const row = document.createElement('tr');
@@ -2133,6 +2336,7 @@
                     </td>
                     <td>
                         <div class="action-btns">
+                            <button type="button" class="btn-icon btn-secondary" onclick="openSalePreview(${sale.id})" title="Preview"><i class="fas fa-eye"></i></button>
                             <button type="button" class="btn-icon btn-edit" onclick="openModal('addSale', ${sale.id})" title="Edit"><i class="fas fa-edit"></i></button>
                             <button type="button" class="btn-icon btn-delete" onclick="deleteSale(${sale.id})" title="Hapus"><i class="fas fa-trash"></i></button>
                         </div>
@@ -2430,6 +2634,41 @@
             if (!data.finance) data.finance = { openingBalance: 0, openingDate: '', openingNote: '', transactions: [] };
             if (!Array.isArray(data.finance.transactions)) data.finance.transactions = [];
             return data.finance;
+        }
+
+        function upsertSaleCostExpense(sale) {
+            const f = ensureFinance();
+            const st = (sale.status || 'pending').toString().toLowerCase();
+            const costs = (sale.costs || {});
+            const shipping = parseInt(costs.shipping, 10) || 0;
+            const fee = parseInt(costs.fee, 10) || 0;
+            const amount = shipping + fee;
+
+            // keep expenses only for SUCCESS sales with non-zero cost
+            const shouldExist = st === 'success' && amount > 0;
+            const refId = sale.id;
+            const existingIdx = f.transactions.findIndex(t => t && t.refKind === 'sale_cost' && t.refId === refId);
+            if (!shouldExist) {
+                if (existingIdx >= 0) f.transactions.splice(existingIdx, 1);
+                return;
+            }
+            const descParts = [];
+            if (sale.invoice) descParts.push(sale.invoice);
+            if (sale.channel) descParts.push(sale.channel);
+            if (sale.productName) descParts.push(sale.productName);
+            const description = descParts.join(' • ') || 'Biaya penjualan';
+            const txn = {
+                id: existingIdx >= 0 ? f.transactions[existingIdx].id : Date.now() + Math.floor(Math.random() * 100000),
+                date: sale.date,
+                type: 'out',
+                amount,
+                category: 'Biaya penjualan',
+                description,
+                refKind: 'sale_cost',
+                refId
+            };
+            if (existingIdx >= 0) f.transactions[existingIdx] = txn;
+            else f.transactions.push(txn);
         }
 
         function saveOpeningBalance() {
@@ -2946,6 +3185,105 @@
         }
 
         // Utilities
+        function ensureSettings() {
+            if (!data.settings) data.settings = { invoicePrefix: 'INV-', nextInvoiceNumber: 1 };
+            if (!data.settings.invoicePrefix) data.settings.invoicePrefix = 'INV-';
+            if (typeof data.settings.nextInvoiceNumber !== 'number' || isNaN(data.settings.nextInvoiceNumber) || data.settings.nextInvoiceNumber < 1) {
+                data.settings.nextInvoiceNumber = 1;
+            }
+            return data.settings;
+        }
+
+        function generateNextInvoice() {
+            const s = ensureSettings();
+            const prefix = s.invoicePrefix;
+            const n = s.nextInvoiceNumber;
+            s.nextInvoiceNumber = n + 1;
+            saveData();
+            const width = Math.max(3, String(n).length);
+            return prefix + String(n).padStart(width, '0');
+        }
+
+        function exportSalesCsv() {
+            const rows = getFilteredSales();
+            const header = ['Tanggal', 'NoFaktur', 'Channel', 'Status', 'SKU', 'Produk', 'Customer', 'Qty', 'Harga', 'Total', 'Profit', 'Ongkir', 'Fee', 'NetProfit', 'Catatan'];
+            const lines = [header.join(',')];
+            rows.forEach(s => {
+                const c = s.costs || {};
+                const ship = parseInt(c.shipping, 10) || 0;
+                const fee = parseInt(c.fee, 10) || 0;
+                const net = (s.profit || 0) - (ship + fee);
+                const vals = [
+                    s.date || '',
+                    (s.invoice || '').replace(/,/g, ' '),
+                    (s.channel || '').replace(/,/g, ' '),
+                    (s.status || '').replace(/,/g, ' '),
+                    (s.sku || '').replace(/,/g, ' '),
+                    (s.productName || '').replace(/,/g, ' '),
+                    (s.customer || '').replace(/,/g, ' '),
+                    String(s.qty || 0),
+                    String(s.price || 0),
+                    String(s.total || 0),
+                    String(s.profit || 0),
+                    String(ship),
+                    String(fee),
+                    String(net),
+                    (s.note || '').replace(/[\r\n]+/g, ' ').replace(/,/g, ' ')
+                ];
+                lines.push(vals.join(','));
+            });
+            const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `penjualan_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            showToast('CSV penjualan diunduh', 'success');
+        }
+
+        function exportSalesPdf() {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                showToast('PDF library belum termuat — refresh halaman.', 'error');
+                return;
+            }
+            const rows = getFilteredSales();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            doc.setFontSize(14);
+            doc.text('Penjualan (sesuai filter)', 14, 16);
+            doc.setFontSize(9);
+            doc.text('Dicetak: ' + new Date().toLocaleString('id-ID'), 14, 22);
+
+            const body = rows.map(s => {
+                const c = s.costs || {};
+                const ship = parseInt(c.shipping, 10) || 0;
+                const fee = parseInt(c.fee, 10) || 0;
+                const net = (s.profit || 0) - (ship + fee);
+                return [
+                    formatDate(s.date),
+                    s.invoice || '-',
+                    s.channel || '-',
+                    (s.status || '').toString(),
+                    (s.productName || '').substring(0, 22),
+                    String(s.qty || 0),
+                    'Rp ' + formatNumber(s.total || 0),
+                    'Rp ' + formatNumber(s.profit || 0),
+                    'Rp ' + formatNumber(ship + fee),
+                    'Rp ' + formatNumber(net)
+                ];
+            });
+
+            doc.autoTable({
+                startY: 26,
+                head: [['Tgl', 'Faktur', 'Channel', 'Status', 'Produk', 'Qty', 'Total', 'Profit', 'Biaya', 'Net']],
+                body: body.length ? body : [['-', '-', '-', '-', 'Belum ada data', '-', '-', '-', '-', '-']],
+                styles: { fontSize: 7 },
+                headStyles: { fillColor: [37, 99, 235] }
+            });
+            doc.save(`penjualan_${new Date().toISOString().split('T')[0]}.pdf`);
+            showToast('PDF penjualan diunduh', 'success');
+        }
+
         function updateProductSelects() {
             const purchaseSelect = document.getElementById('purchaseProduct');
             const saleSelect = document.getElementById('saleProduct');
@@ -3030,6 +3368,10 @@
                 if (s.channel === undefined) {
                     s.channel = (s.method || '').toString().trim();
                 }
+                if (s.note === undefined) s.note = '';
+                if (!s.costs) s.costs = { shipping: 0, fee: 0 };
+                if (s.costs.shipping === undefined) s.costs.shipping = 0;
+                if (s.costs.fee === undefined) s.costs.fee = 0;
             });
             if (!data.finance) {
                 data.finance = { openingBalance: 0, openingDate: '', openingNote: '', transactions: [] };
@@ -3038,6 +3380,25 @@
             if (data.finance.openingDate === undefined) data.finance.openingDate = '';
             if (data.finance.openingNote === undefined) data.finance.openingNote = '';
             if (!Array.isArray(data.finance.transactions)) data.finance.transactions = [];
+
+            if (!data.settings) data.settings = { invoicePrefix: 'INV-', nextInvoiceNumber: 1 };
+            if (!data.settings.invoicePrefix) data.settings.invoicePrefix = 'INV-';
+            if (typeof data.settings.nextInvoiceNumber !== 'number' || isNaN(data.settings.nextInvoiceNumber) || data.settings.nextInvoiceNumber < 1) {
+                data.settings.nextInvoiceNumber = 1;
+            }
+
+            // derive next invoice number from existing sales invoices
+            const prefix = data.settings.invoicePrefix;
+            let maxN = 0;
+            (data.sales || []).forEach(s => {
+                const inv = (s.invoice || '').toString().trim();
+                const m = inv.match(/(\d+)\s*$/);
+                if (inv.startsWith(prefix) && m) {
+                    const n = parseInt(m[1], 10);
+                    if (!isNaN(n) && n > maxN) maxN = n;
+                }
+            });
+            if (maxN + 1 > data.settings.nextInvoiceNumber) data.settings.nextInvoiceNumber = maxN + 1;
         }
 
         function exportFinancialPdf() {
@@ -3178,6 +3539,11 @@
                     if (status === 'pending') product.reserved = Math.max(0, getReservedStock(product) - sale.qty);
                     if (status === 'success') product.stock += sale.qty;
                     normalizeProductStock(product);
+                }
+                if (sale) {
+                    // remove linked expense if any
+                    const f = ensureFinance();
+                    f.transactions = (f.transactions || []).filter(t => !(t && t.refKind === 'sale_cost' && t.refId === sale.id));
                 }
                 data.sales = data.sales.filter(s => s.id !== id);
                 saveData();
