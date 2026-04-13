@@ -1,7 +1,7 @@
 {
   "app": "titikbersama",
   "version": 1,
-  "exportedAt": "2026-04-13T15:10:08.344Z",
+  "exportedAt": "2026-04-13T15:27:11.977Z",
   "data": {
     "products": [
       {
@@ -19,9 +19,9 @@
         "name": "Hard Disk 500GB",
         "sku": "HDD-500",
         "category": "harddisk",
-        "stock": 2,
+        "stock": 4,
         "price": 230000,
-        "avgBuyPrice": 110000,
+        "avgBuyPrice": 118333.33333333333,
         "notes": "Import CSV"
       },
       {
@@ -49,9 +49,9 @@
         "name": "Hard Disk 2TB",
         "sku": "HDD-2TB",
         "category": "harddisk",
-        "stock": 0,
+        "stock": 1,
         "price": 589000,
-        "avgBuyPrice": 450000,
+        "avgBuyPrice": 45000000,
         "notes": "Import CSV"
       }
     ],
@@ -75,6 +75,26 @@
         "qty": 1,
         "price": 100000,
         "total": 100000
+      },
+      {
+        "id": 1776093036505,
+        "date": "2026-04-09",
+        "productId": 1776092815657,
+        "productName": "Hard Disk 2TB",
+        "supplier": "Rahmat",
+        "qty": 1,
+        "price": 45000000,
+        "total": 45000000
+      },
+      {
+        "id": 1776093054017,
+        "date": "2026-04-09",
+        "productId": 1776092878964,
+        "productName": "Hard Disk 500GB",
+        "supplier": "Rahmat",
+        "qty": 1,
+        "price": 135000,
+        "total": 135000
       }
     ],
     "sales": [
@@ -230,15 +250,15 @@
         "date": "2026-04-07",
         "invoice": "INV-025",
         "productId": 1776092878964,
-        "productName": "Hard Disk 500GB A",
-        "sku": "HDD-500-A",
+        "productName": "Hard Disk 500GB",
+        "sku": "HDD-500",
         "customer": "Muhammad Taufiq Nugroho",
         "qty": 1,
         "price": 178000,
         "total": 178000,
-        "profit": -110000,
-        "avgBuyPrice": 110000,
-        "status": "success",
+        "profit": 59666.66666666667,
+        "avgBuyPrice": 118333.33333333333,
+        "status": "cancel",
         "channel": "Tokopedia",
         "note": "",
         "costs": {
