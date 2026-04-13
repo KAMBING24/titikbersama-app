@@ -1,7 +1,7 @@
 {
   "app": "titikbersama",
   "version": 1,
-  "exportedAt": "2026-04-13T15:36:16.300Z",
+  "exportedAt": "2026-04-13T15:38:42.708Z",
   "data": {
     "products": [
       {
@@ -51,7 +51,7 @@
         "category": "harddisk",
         "stock": 1,
         "price": 589000,
-        "avgBuyPrice": 4500000,
+        "avgBuyPrice": 450000,
         "notes": "Import CSV"
       }
     ],
@@ -83,8 +83,8 @@
         "productName": "Hard Disk 2TB",
         "supplier": "Rahmat",
         "qty": 1,
-        "price": 4500000,
-        "total": 4500000
+        "price": 450000,
+        "total": 450000
       },
       {
         "id": 1776093054017,
@@ -491,6 +491,15 @@
         "amount": 550000,
         "paid": 0,
         "date": "2026-04-02",
+        "interest": 0,
+        "notes": ""
+      },
+      {
+        "id": 1776094720866,
+        "investor": "Saya Sendiri",
+        "amount": 800000,
+        "paid": 0,
+        "date": "2026-04-13",
         "interest": 0,
         "notes": ""
       }
