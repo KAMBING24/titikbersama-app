@@ -1042,16 +1042,16 @@
                     <table id="salesTable">
                         <thead>
                             <tr>
-                                <th>Tanggal</th>
-                                <th>No. Faktur</th>
-                                <th>Terjual kemana</th>
-                                <th>Status</th>
-                                <th>Barang</th>
-                                <th>Customer</th>
-                                <th>Jumlah</th>
-                                <th>Harga Jual/pcs</th>
-                                <th>Total</th>
-                                <th>Keuntungan</th>
+                                <th style="cursor:pointer;" onclick="setSalesSort('date')">Tanggal</th>
+                                <th style="cursor:pointer;" onclick="setSalesSort('invoice')">No. Faktur</th>
+                                <th style="cursor:pointer;" onclick="setSalesSort('channel')">Terjual kemana</th>
+                                <th style="cursor:pointer;" onclick="setSalesSort('status')">Status</th>
+                                <th style="cursor:pointer;" onclick="setSalesSort('product')">Barang</th>
+                                <th style="cursor:pointer;" onclick="setSalesSort('customer')">Customer</th>
+                                <th style="cursor:pointer;" onclick="setSalesSort('qty')">Jumlah</th>
+                                <th style="cursor:pointer;" onclick="setSalesSort('price')">Harga Jual/pcs</th>
+                                <th style="cursor:pointer;" onclick="setSalesSort('total')">Total</th>
+                                <th style="cursor:pointer;" onclick="setSalesSort('profit')">Keuntungan</th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
@@ -2173,6 +2173,51 @@
             renderSales();
         }
 
+        let salesSortKey = 'date';
+        let salesSortDir = 'desc'; // 'asc' | 'desc'
+
+        function setSalesSort(key) {
+            if (salesSortKey === key) {
+                salesSortDir = salesSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                salesSortKey = key;
+                // Default directions
+                salesSortDir = (key === 'date' || key === 'total' || key === 'profit' || key === 'qty') ? 'desc' : 'asc';
+            }
+            renderSales();
+        }
+
+        function getSortValue(sale, key) {
+            if (key === 'date') return new Date(sale.date || 0).getTime() || 0;
+            if (key === 'invoice') return (sale.invoice || '').toString().toLowerCase();
+            if (key === 'status') return (sale.status || '').toString().toLowerCase();
+            if (key === 'channel') return (sale.channel || '').toString().toLowerCase();
+            if (key === 'product') return (sale.productName || '').toString().toLowerCase();
+            if (key === 'customer') return (sale.customer || '').toString().toLowerCase();
+            if (key === 'qty') return parseInt(sale.qty, 10) || 0;
+            if (key === 'price') return parseInt(sale.price, 10) || 0;
+            if (key === 'total') return parseInt(sale.total, 10) || 0;
+            if (key === 'profit') return parseInt(sale.profit, 10) || 0;
+            return '';
+        }
+
+        function sortSales(rows) {
+            const dir = salesSortDir === 'asc' ? 1 : -1;
+            const key = salesSortKey;
+            return [...rows].sort((a, b) => {
+                const av = getSortValue(a, key);
+                const bv = getSortValue(b, key);
+                if (typeof av === 'number' && typeof bv === 'number') {
+                    if (av === bv) return 0;
+                    return av > bv ? dir : -dir;
+                }
+                const as = String(av);
+                const bs = String(bv);
+                if (as === bs) return 0;
+                return as > bs ? dir : -dir;
+            });
+        }
+
         function getFilteredSales() {
             const query = (document.getElementById('salesQuery') ? document.getElementById('salesQuery').value : '').trim().toLowerCase();
             const statusFilter = (document.getElementById('salesStatusFilter') ? document.getElementById('salesStatusFilter').value : '').trim().toLowerCase();
@@ -2194,7 +2239,7 @@
                     ].filter(Boolean).join(' ').toLowerCase();
                     return hay.includes(query);
                 })
-                .sort((a, b) => new Date(b.date) - new Date(a.date));
+                ;
         }
 
         function openSalePreview(id) {
@@ -2250,7 +2295,7 @@
             const tbody = document.getElementById('salesBody');
             tbody.innerHTML = '';
             
-            const sorted = getFilteredSales();
+            const sorted = sortSales(getFilteredSales());
 
             // Quick stats (based on filtered set)
             const count = sorted.length;
