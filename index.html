@@ -2188,24 +2188,28 @@
             renderSales();
         }
 
+        // FIX: Update the sort indicators so they never hide completely, but show inactive icons
         function updateSalesSortIndicators() {
             const keys = ['date','invoice','channel','status','product','customer','qty','price','total','profit'];
             keys.forEach(k => {
                 const el = document.getElementById('salesSort_' + k);
                 if (!el) return;
-                if (salesSortKey !== k) {
-                    el.textContent = '';
-                    el.style.opacity = '0.6';
-                    return;
-                }
+                
                 const isText = ['invoice','channel','status','product','customer'].includes(k);
                 const isNumber = ['qty','price','total','profit'].includes(k);
+                
+                if (salesSortKey !== k) {
+                    el.innerHTML = '<i class="fas fa-sort" style="color: var(--text-light); opacity: 0.4; margin-left: 4px;"></i>';
+                    el.style.opacity = '1';
+                    return;
+                }
+                
                 let tag = '';
-                if (k === 'date') tag = salesSortDir === 'asc' ? '(Terlama)' : '(Terbaru)';
-                else if (isText) tag = salesSortDir === 'asc' ? '(A-Z)' : '(Z-A)';
-                else if (isNumber) tag = salesSortDir === 'asc' ? '(Kecil-Besar)' : '(Besar-Kecil)';
-                el.textContent = tag;
-                el.style.opacity = '1';
+                if (k === 'date') tag = salesSortDir === 'asc' ? '▲ Terlama' : '▼ Terbaru';
+                else if (isText) tag = salesSortDir === 'asc' ? '▲ A-Z' : '▼ Z-A';
+                else if (isNumber) tag = salesSortDir === 'asc' ? '▲ Min-Max' : '▼ Max-Min';
+                
+                el.innerHTML = `<span style="color: var(--primary); margin-left: 4px; font-weight: bold;">${tag}</span>`;
             });
 
             const labelMap = {
@@ -2220,15 +2224,16 @@
                 total: 'Total',
                 profit: 'Keuntungan'
             };
+            
             const active = document.getElementById('salesSortActive');
             if (active) {
                 const isText = ['invoice','channel','status','product','customer'].includes(salesSortKey);
                 const isNumber = ['qty','price','total','profit'].includes(salesSortKey);
                 let tag = '';
-                if (salesSortKey === 'date') tag = salesSortDir === 'asc' ? 'Terlama' : 'Terbaru';
-                else if (isText) tag = salesSortDir === 'asc' ? 'A-Z' : 'Z-A';
-                else if (isNumber) tag = salesSortDir === 'asc' ? 'Kecil-Besar' : 'Besar-Kecil';
-                active.textContent = `Urut: ${labelMap[salesSortKey] || salesSortKey} • ${tag}`;
+                if (salesSortKey === 'date') tag = salesSortDir === 'asc' ? 'Terlama ▲' : 'Terbaru ▼';
+                else if (isText) tag = salesSortDir === 'asc' ? 'A-Z ▲' : 'Z-A ▼';
+                else if (isNumber) tag = salesSortDir === 'asc' ? 'Min-Max ▲' : 'Max-Min ▼';
+                active.innerHTML = `Urut: ${labelMap[salesSortKey] || salesSortKey} • ${tag}`;
             }
         }
 
@@ -3299,8 +3304,9 @@
             return prefix + String(n).padStart(width, '0');
         }
 
+        // CSV Export sekarang menghargai (respect) sort filter yang sedang aktif
         function exportSalesCsv() {
-            const rows = getFilteredSales();
+            const rows = sortSales(getFilteredSales());
             const header = ['Tanggal', 'NoFaktur', 'Channel', 'Status', 'SKU', 'Produk', 'Customer', 'Qty', 'Harga', 'Total', 'Profit', 'Ongkir', 'Fee', 'NetProfit', 'Catatan'];
             const lines = [header.join(',')];
             rows.forEach(s => {
@@ -3336,12 +3342,13 @@
             showToast('CSV penjualan diunduh', 'success');
         }
 
+        // PDF Export sekarang menghargai (respect) sort filter yang sedang aktif
         function exportSalesPdf() {
             if (!window.jspdf || !window.jspdf.jsPDF) {
                 showToast('PDF library belum termuat — refresh halaman.', 'error');
                 return;
             }
-            const rows = getFilteredSales();
+            const rows = sortSales(getFilteredSales());
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ unit: 'mm', format: 'a4' });
             doc.setFontSize(14);
