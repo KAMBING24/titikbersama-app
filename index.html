@@ -3036,7 +3036,7 @@
             return hasFaktur && hasProduk;
         }
 
-        function importRekapRow(cols, get, seenInvoices, adjustStock) {
+        function importRekapRow(cols, get, seenInvoices) {
             const invoice = get('no faktur', 'no. faktur', 'nofaktur').trim();
             if (!invoice) return { ok: false, reason: 'empty' };
             if (seenInvoices.has(invoice)) return { ok: false, reason: 'dup' };
@@ -3060,6 +3060,10 @@
             let profit = profitStr ? parseMoneyId(get('profit')) : (totalJual - totalModal);
             if (isNaN(profit)) profit = 0;
 
+            const pay = get('status bayar').trim().toLowerCase();
+            const status = pay === 'lunas' || pay === 'sukses' || pay === 'success' ? 'success' : (pay === 'cancel' || pay === 'dibatalkan' ? 'cancel' : 'pending');
+            const channel = get('metode').trim() || '-';
+
             const sale = {
                 id: Date.now() + Math.floor(Math.random() * 1000000),
                 date: dateStr,
@@ -3070,16 +3074,14 @@
                 customer,
                 qty,
                 price: unitSell,
-                total: totalJual || (qty * unitSell),
+                total: totalJual > 0 ? totalJual : (qty * unitSell),
                 profit,
                 avgBuyPrice: product.avgBuyPrice,
-                method: get('metode').trim(),
-                paymentStatus: get('status bayar').trim()
+                status,
+                channel,
+                note: '',
+                costs: { shipping: 0, fee: 0 }
             };
-
-            if (adjustStock && qty > 0) {
-                if (product.stock >= qty) product.stock -= qty;
-            }
 
             data.sales.push(sale);
             return { ok: true };
@@ -3110,7 +3112,6 @@
                 return;
             }
 
-            const adjustStock = document.getElementById('csvAdjustStock') && document.getElementById('csvAdjustStock').checked;
             const headerMap = buildHeaderMap(rows[0]);
             const hKeys = Object.keys(headerMap);
 
@@ -3118,23 +3119,31 @@
                 const seen = new Set((data.sales || []).map(s => s.invoice).filter(Boolean));
                 let imported = 0;
                 let dup = 0;
+                let empty = 0;
                 for (let r = 1; r < rows.length; r++) {
                     const cols = rows[r];
                     if (!cols.length || cols.every(c => !String(c).trim())) continue;
                     const get = makeColGetter(cols, headerMap);
-                    const res = importRekapRow(cols, get, seen, adjustStock);
+                    const res = importRekapRow(cols, get, seen);
                     if (res.ok) imported++;
                     else if (res.reason === 'dup') dup++;
+                    else if (res.reason === 'empty') empty++;
                 }
                 saveData();
                 updateDashboard();
                 renderInventory();
                 updateProductSelects();
                 renderSales();
-                showToast(`Import rekap: ${imported} penjualan` + (dup ? ` (${dup} duplikat nomor faktur dilewati)` : ''), imported ? 'success' : 'warning');
+                showToast(
+                    `Import rekap penjualan: ${imported} masuk` +
+                    (dup ? ` • ${dup} duplikat` : '') +
+                    (empty ? ` • ${empty} baris kosong` : ''),
+                    imported ? 'success' : 'warning'
+                );
                 return;
             }
 
+            const adjustStock = document.getElementById('csvAdjustStock') && document.getElementById('csvAdjustStock').checked;
             const hasSupplierHeader = hKeys.some(k => k.includes('supplier'));
             let imported = 0;
 
