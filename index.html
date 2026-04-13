@@ -1036,22 +1036,25 @@
                             </select>
                             <input type="date" class="form-input" id="salesDateFrom" style="min-width: 160px;" onchange="renderSales()">
                             <input type="date" class="form-input" id="salesDateTo" style="min-width: 160px;" onchange="renderSales()">
+                            <button class="btn btn-secondary" onclick="resetSalesSort()" title="Balik ke urutan default (Tanggal terbaru)">
+                                <i class="fas fa-sort"></i> Reset Urut
+                            </button>
                             <button class="btn btn-secondary" onclick="resetSalesFilters()"><i class="fas fa-rotate-left"></i> Reset</button>
                         </div>
                     </div>
                     <table id="salesTable">
                         <thead>
                             <tr>
-                                <th style="cursor:pointer;" onclick="setSalesSort('date')">Tanggal</th>
-                                <th style="cursor:pointer;" onclick="setSalesSort('invoice')">No. Faktur</th>
-                                <th style="cursor:pointer;" onclick="setSalesSort('channel')">Terjual kemana</th>
-                                <th style="cursor:pointer;" onclick="setSalesSort('status')">Status</th>
-                                <th style="cursor:pointer;" onclick="setSalesSort('product')">Barang</th>
-                                <th style="cursor:pointer;" onclick="setSalesSort('customer')">Customer</th>
-                                <th style="cursor:pointer;" onclick="setSalesSort('qty')">Jumlah</th>
-                                <th style="cursor:pointer;" onclick="setSalesSort('price')">Harga Jual/pcs</th>
-                                <th style="cursor:pointer;" onclick="setSalesSort('total')">Total</th>
-                                <th style="cursor:pointer;" onclick="setSalesSort('profit')">Keuntungan</th>
+                                <th style="cursor:pointer; user-select:none;" onclick="setSalesSort('date')">Tanggal <span id="salesSort_date"></span></th>
+                                <th style="cursor:pointer; user-select:none;" onclick="setSalesSort('invoice')">No. Faktur <span id="salesSort_invoice"></span></th>
+                                <th style="cursor:pointer; user-select:none;" onclick="setSalesSort('channel')">Terjual kemana <span id="salesSort_channel"></span></th>
+                                <th style="cursor:pointer; user-select:none;" onclick="setSalesSort('status')">Status <span id="salesSort_status"></span></th>
+                                <th style="cursor:pointer; user-select:none;" onclick="setSalesSort('product')">Barang <span id="salesSort_product"></span></th>
+                                <th style="cursor:pointer; user-select:none;" onclick="setSalesSort('customer')">Customer <span id="salesSort_customer"></span></th>
+                                <th style="cursor:pointer; user-select:none;" onclick="setSalesSort('qty')">Jumlah <span id="salesSort_qty"></span></th>
+                                <th style="cursor:pointer; user-select:none;" onclick="setSalesSort('price')">Harga Jual/pcs <span id="salesSort_price"></span></th>
+                                <th style="cursor:pointer; user-select:none;" onclick="setSalesSort('total')">Total <span id="salesSort_total"></span></th>
+                                <th style="cursor:pointer; user-select:none;" onclick="setSalesSort('profit')">Keuntungan <span id="salesSort_profit"></span></th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
@@ -2176,6 +2179,27 @@
         let salesSortKey = 'date';
         let salesSortDir = 'desc'; // 'asc' | 'desc'
 
+        function resetSalesSort() {
+            salesSortKey = 'date';
+            salesSortDir = 'desc';
+            renderSales();
+        }
+
+        function updateSalesSortIndicators() {
+            const keys = ['date','invoice','channel','status','product','customer','qty','price','total','profit'];
+            keys.forEach(k => {
+                const el = document.getElementById('salesSort_' + k);
+                if (!el) return;
+                if (salesSortKey !== k) {
+                    el.textContent = '';
+                    el.style.opacity = '0.6';
+                    return;
+                }
+                el.textContent = salesSortDir === 'asc' ? ' ▲' : ' ▼';
+                el.style.opacity = '1';
+            });
+        }
+
         function setSalesSort(key) {
             if (salesSortKey === key) {
                 salesSortDir = salesSortDir === 'asc' ? 'desc' : 'asc';
@@ -2295,6 +2319,7 @@
             const tbody = document.getElementById('salesBody');
             tbody.innerHTML = '';
             
+            updateSalesSortIndicators();
             const sorted = sortSales(getFilteredSales());
 
             // Quick stats (based on filtered set)
