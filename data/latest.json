@@ -1,7 +1,7 @@
 {
   "app": "titikbersama",
   "version": 1,
-  "exportedAt": "2026-04-13T15:32:47.906Z",
+  "exportedAt": "2026-04-13T15:33:53.487Z",
   "data": {
     "products": [
       {
@@ -9,9 +9,9 @@
         "name": "Hard Disk 1TB",
         "sku": "HDD-1TB",
         "category": "harddisk",
-        "stock": 1,
+        "stock": 0,
         "price": 399000,
-        "avgBuyPrice": 100000,
+        "avgBuyPrice": 300000,
         "notes": "Import CSV"
       },
       {
@@ -19,9 +19,9 @@
         "name": "Hard Disk 500GB",
         "sku": "HDD-500",
         "category": "harddisk",
-        "stock": 3,
+        "stock": 0,
         "price": 230000,
-        "avgBuyPrice": 118333.33333333333,
+        "avgBuyPrice": 130000,
         "notes": "Import CSV"
       },
       {
@@ -39,9 +39,9 @@
         "name": "Intel i5-4570 Tray",
         "sku": "PROC-I5-4570",
         "category": "lainnya",
-        "stock": 200,
-        "price": 175000,
-        "avgBuyPrice": 2,
+        "stock": 0,
+        "price": 250000,
+        "avgBuyPrice": 150000,
         "notes": "Import CSV"
       },
       {
@@ -51,7 +51,7 @@
         "category": "harddisk",
         "stock": 2,
         "price": 589000,
-        "avgBuyPrice": 45000000,
+        "avgBuyPrice": 450000,
         "notes": "Import CSV"
       }
     ],
