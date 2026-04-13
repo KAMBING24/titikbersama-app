@@ -1189,6 +1189,21 @@
                     <h1>Import Data dari Spreadsheet</h1>
                 </div>
 
+                <div style="background: var(--card-bg); padding: 20px; border-radius: 14px; border: 1px solid var(--border); margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 10px;">Backup & Restore Data (JSON)</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 12px;">
+                        Gunakan ini untuk pindah data antar browser/device. Data transaksi kamu tidak otomatis tersimpan ke GitHub.
+                    </p>
+                    <div style="display:flex; gap:10px; flex-wrap: wrap; align-items: center;">
+                        <button class="btn btn-primary" onclick="exportData()"><i class="fas fa-file-export"></i> Export Backup JSON</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('backupJsonFile').click()"><i class="fas fa-file-import"></i> Import Restore JSON</button>
+                        <input type="file" id="backupJsonFile" accept=".json,application/json" style="display:none" onchange="handleBackupImport(event)">
+                    </div>
+                    <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-light);">
+                        Snapshot otomatis lokal: <span id="autoBackupInfo">-</span>
+                    </div>
+                </div>
+
                 <div class="import-area" onclick="document.getElementById('csvFile').click()">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <h3>Upload File CSV/Excel</h3>
@@ -3437,15 +3452,103 @@
         }
 
         // Local Storage
+        function buildBackupMeta() {
+            return {
+                app: 'titikbersama',
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                data
+            };
+        }
+
+        function updateAutoBackupInfo() {
+            const el = document.getElementById('autoBackupInfo');
+            if (!el) return;
+            const keys = Object.keys(localStorage).filter(k => k.startsWith('titikbersama_backup_')).sort().reverse();
+            if (!keys.length) {
+                el.textContent = 'belum ada';
+                return;
+            }
+            const latest = localStorage.getItem(keys[0]);
+            try {
+                const parsed = JSON.parse(latest);
+                const when = parsed && parsed.savedAt ? new Date(parsed.savedAt).toLocaleString('id-ID') : '-';
+                el.textContent = `${keys.length} snapshot, terakhir ${when}`;
+            } catch (_) {
+                el.textContent = `${keys.length} snapshot`;
+            }
+        }
+
+        function saveAutoBackupSnapshot() {
+            try {
+                const payload = {
+                    savedAt: new Date().toISOString(),
+                    data
+                };
+                const key = 'titikbersama_backup_' + Date.now();
+                localStorage.setItem(key, JSON.stringify(payload));
+                const keys = Object.keys(localStorage).filter(k => k.startsWith('titikbersama_backup_')).sort();
+                // keep latest 5 snapshots
+                while (keys.length > 5) {
+                    const oldKey = keys.shift();
+                    localStorage.removeItem(oldKey);
+                }
+            } catch (_) {}
+            updateAutoBackupInfo();
+        }
+
         function saveData() {
             localStorage.setItem('titikbersama_data', JSON.stringify(data));
+            saveAutoBackupSnapshot();
         }
 
         function loadData() {
             const saved = localStorage.getItem('titikbersama_data');
             if (saved) {
                 data = JSON.parse(saved);
+            } else {
+                // fallback to newest autosnapshot if main key missing
+                const keys = Object.keys(localStorage).filter(k => k.startsWith('titikbersama_backup_')).sort().reverse();
+                if (keys.length) {
+                    try {
+                        const snap = JSON.parse(localStorage.getItem(keys[0]));
+                        if (snap && snap.data) data = snap.data;
+                    } catch (_) {}
+                }
             }
+            updateAutoBackupInfo();
+        }
+
+        function handleBackupImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const raw = JSON.parse(e.target.result);
+                    const imported = raw && raw.data ? raw.data : raw;
+                    if (!imported || typeof imported !== 'object') {
+                        showToast('Format backup tidak valid', 'error');
+                        return;
+                    }
+                    if (!confirm('Restore backup akan mengganti data saat ini. Lanjutkan?')) return;
+                    data = imported;
+                    migrateDataShape();
+                    saveData();
+                    updateDashboard();
+                    renderInventory();
+                    renderPurchases();
+                    renderSales();
+                    renderDebt();
+                    updateProductSelects();
+                    showToast('Restore backup berhasil', 'success');
+                } catch (_) {
+                    showToast('File JSON backup tidak valid', 'error');
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
         }
 
         function migrateDataShape() {
@@ -3594,7 +3697,7 @@
         }
 
         function exportData() {
-            const dataStr = JSON.stringify(data, null, 2);
+            const dataStr = JSON.stringify(buildBackupMeta(), null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
