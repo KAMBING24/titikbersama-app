@@ -1,7 +1,7 @@
 {
   "app": "titikbersama",
   "version": 1,
-  "exportedAt": "2026-04-13T15:30:21.955Z",
+  "exportedAt": "2026-04-13T15:31:35.420Z",
   "data": {
     "products": [
       {
@@ -19,7 +19,7 @@
         "name": "Hard Disk 500GB",
         "sku": "HDD-500",
         "category": "harddisk",
-        "stock": 4,
+        "stock": 3,
         "price": 230000,
         "avgBuyPrice": 118333.33333333333,
         "notes": "Import CSV"
@@ -412,6 +412,27 @@
           "shipping": 0,
           "fee": 0
         }
+      },
+      {
+        "id": 1776094293090,
+        "date": "2026-04-11",
+        "invoice": "INV-002",
+        "productId": 1776092878964,
+        "productName": "Hard Disk 500GB",
+        "sku": "HDD-500",
+        "customer": "sadamam",
+        "qty": 1,
+        "price": 181300,
+        "total": 181300,
+        "profit": 62966.66666666667,
+        "avgBuyPrice": 118333.33333333333,
+        "status": "success",
+        "channel": "Shopee",
+        "note": "",
+        "costs": {
+          "shipping": 0,
+          "fee": 0
+        }
       }
     ],
     "debts": [],
@@ -424,7 +445,7 @@
     },
     "settings": {
       "invoicePrefix": "INV-",
-      "nextInvoiceNumber": 1
+      "nextInvoiceNumber": 3
     }
   }
 }
